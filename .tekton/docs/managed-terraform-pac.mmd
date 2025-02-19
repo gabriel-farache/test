@@ -1,0 +1,41 @@
+flowchart LR
+  subgraph tasks [" "]
+    direction TB
+    style tasks fill:#FFFFFF,stroke:#FFFFFF
+    style clone fill:#90EE90,stroke:#2F2F2F
+    clone==>|"#9945;"|init-plan
+    clone==>|"#9945; #9929; #9929;"|get-merged-pr-info
+    clone["clone\n#128212; #128211;"]
+    style init-plan fill:#90EE90,stroke:#2F2F2F
+    init-plan==>|"#9945; #9929;"|policy-scan
+    init-plan["init-plan\n#128212; #128211;"]
+    style policy-scan fill:#90EE90,stroke:#2F2F2F
+    policy-scan==>|"#10004; #9929; #9929;"|upload-plan
+    policy-scan==>|"#9945; #9929; #9929; #9929;"|apply
+    policy-scan["policy-scan\n#128212;"]
+    style upload-plan fill:#90EE90,stroke:#2F2F2F
+    upload-plan["upload-plan\n#128212;"]
+    style get-merged-pr-info fill:#90EE90,stroke:#2F2F2F
+    get-merged-pr-info==>|"#9945; #9929; #9929;"|download-plan
+    get-merged-pr-info["#40;GH#41; get-merged-pr-info\n#128212; #128211;"]
+    style download-plan fill:#90EE90,stroke:#2F2F2F
+    download-plan==>|"#9945; #9929; #9929;"|apply-plan
+    download-plan["download-plan\n#128212;"]
+    style apply-plan fill:#90EE90,stroke:#2F2F2F
+    apply-plan["apply-plan\n#128212; #128211;"]
+    style apply fill:#90EE90,stroke:#2F2F2F
+    apply["apply\n#128212; #128211;"]
+  end
+  subgraph key [" "]
+    direction TB
+    subgraph workspaces ["Workspaces #128218;"]
+      style workspaces fill:#FFFFFF,stroke:#f66,stroke-width:2px,color:black,stroke-dasharray: 5 5
+      direction TB
+      clone-workspace["clone-workspace #128212;"]
+      style clone-workspace fill:#9FD7FB,stroke:#2F2F2F,#color:#fff
+      basic-auth["basic-auth #128211;"]
+      style basic-auth fill:#D7A5FD,stroke:#2F2F2F,#color:#fff
+    end
+    guardkey["#9929; = Guard &Tab;\n#10004; = PR Guard &Tab;\n#9945; = Merge Guard &Tab;"]
+    style guardkey fill:#FFFFFF,stroke:#f66,stroke-width:2px,color:black,stroke-dasharray: 5 5,text-align:left
+  end
