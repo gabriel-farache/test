@@ -1,0 +1,8 @@
+databaseConfiguration:
+  databaseType: postgres
+  seedDatabaseWhenEmpty: true
+  connectionString: connectionname=-826eee288300de4973a7bc5c:us-central1:mygoapp-cd048933 user=IaC@.com database=mygoapp_db
+  # connectionStringSecret:
+  #   projectId: -123
+  #   secretId: mygoapp-connection-string
+  #   revision: latest
