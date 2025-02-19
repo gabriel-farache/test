@@ -1,0 +1,6 @@
+version: 3
+server: https://.fossa.com
+project:
+  name: go-kcloutie
+  team: 
+  policy: Website/Hosted Service Use
