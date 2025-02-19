@@ -1,0 +1,5 @@
+
+databaseConfiguration:
+  databaseType: sqlite
+  seedDatabaseWhenEmpty: true
+  connectionString: test.db
