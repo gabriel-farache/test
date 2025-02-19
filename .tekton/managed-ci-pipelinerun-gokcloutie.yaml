@@ -1,0 +1,118 @@
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: "managed-ci-pipelinerun-gokcloutie"
+  labels:
+    app: "managed-ci-pipelinerun"
+    tekton-notify.iac..com/name: "managed-ci-pipelinerun"
+  annotations:
+    tekton-notify.iac..com/git-status-check-context: "ci/tekton" # required to post status check to github
+    tekton-notify.iac..com/generate-from-annotations: "true" # required to tell the notification operator to use annotations instead of a CR
+
+    # Write pipeline run logs to GCS bucket
+    tekton-notify.iac..com/gcs-bucket-name: "prj-iac-team-p-log-bucket" # copy pipeline run log files to this bucket
+    tekton-notify.iac..com/gcs-bucket-wif-kube-sa: pipeline # use pipeline service account to access bucket
+    tekton-notify.iac..com/gcs-bucket-wif-gcp-sa: "sa-pipeline@-.iam.gserviceaccount.com" # GCP service account to access bucket
+
+    # Write task results to GitHub comment
+    tekton-notify.iac..com/git-comment-heading: "# managed-ci-pipeline Results" # Comment used to post results to github
+    tekton-notify.iac..com/git-comment-task-names: '["e2e-tests","checkmarx","sonarqube","fossa","build-image","release"]' # list of task names to post results to github
+    tekton-notify.iac..com/git-use-pac-secret: "true" # use PaC secret to post results to github
+    tekton-notify.iac..com/git-remove-pr-comments: "true"
+
+    pipelinesascode.tekton.dev/on-cel-expression: |
+      (event.matches('^(pull_request)$') &&
+      target_branch.matches('^(main|master)$') &&
+      ( "go-kcloutie/*.go".pathChanged() || "go-kcloutie/go.mod".pathChanged() || ".tekton/managed-ci-pipelinerun-gokcloutie.yaml".pathChanged() || "go-kcloutie/.fossa.yml".pathChanged() || "go-kcloutie/.fossa.yaml".pathChanged() || "go-kcloutie/.checkmarx/*".pathChanged() || "go-kcloutie/sonar-project.properties".pathChanged() || "go-kcloutie/tests/*".pathChanged() || "go-kcloutie/taskfile.yml".pathChanged() || "go-kcloutie/taskfile.yaml".pathChanged() )) ||
+      (event.matches('^(push)$') && target_branch.startsWith("refs/tags"))
+    pipelinesascode.tekton.dev/max-keep-runs: "2"
+spec:
+  # ================================================================================== #
+  params:
+    - name: GCP_PROJECT_ID
+      value: "-"
+    - name: GPG_PRIVATE_KEY_GCP_SECRET_NAME # To skip signing the artifact, leave the value empty
+      value: ""
+    - name: GCP_SERVICE_ACCOUNT
+      value: "sa-pipeline@-.iam.gserviceaccount.com"
+    - name: DISABLE_TESTS
+      value: "false"
+    - name: DISABLE_SONARQUBE
+      value: "false"
+    - name: DISABLE_CHECKMARX
+      value: "false"
+    - name: DISABLE_FOSSA
+      value: "false"
+    - name: DISABLE_TRIGGER_APP_CD_PIPELINE
+      value: "false"
+    - name: IMAGE_REGISTRY
+      value: "us-central1-docker.pkg.dev/-"
+    - name: IMAGE_REGISTRY_NAMESPACE
+      value: "gokcloutie-container-images"
+    - name: APP_NAME
+      value: "go-kcloutie"
+    - name: SOURCE_DIRECTORY
+      value: "go-kcloutie"
+
+    # Pipelines-as-Code built-in variables
+    - name: GIT_CLONE_URL
+      value: "{{ repo_url }}"
+    - name: GIT_HEAD_SHA
+      value: "{{ revision }}"
+    - name: GIT_ORGANIZATION
+      value: "{{ repo_owner }}"
+    - name: GIT_REPOSITORY
+      value: "{{ repo_name }}"
+    - name: GIT_USER
+      value: "{{ sender }}"
+    - name: GIT_SOURCE_BRANCH
+      value: "{{ source_branch }}"
+    - name: GIT_REF
+      value: "{{ target_branch }}"
+    - name: GIT_PR_NUMBER
+      value: "{{ pull_request_number }}"
+    - name: GIT_EVENT
+      value: "{{ event_type }}"
+    - name: GIT_SENDER_LOGIN
+      value: "{{ sender }}"
+  # ================================================================================== #
+
+  pipelineRef:
+    resolver: hub
+    params:
+      - name: type
+        value: artifact
+      - name: catalog
+        value: tekton-pipelines
+      - name: kind
+        value: pipeline
+      - name: name
+        value: managed-app-ci-pipeline
+      - name: version
+        value: ">= 3, < 4"
+
+  taskRunTemplate:
+    serviceAccountName: pipeline
+    podTemplate:
+      securityContext:
+        fsGroupChangePolicy: OnRootMismatch
+
+  workspaces:
+    - name: clone-workspace
+      volumeClaimTemplate:
+        spec:
+          accessModes:
+            - ReadWriteMany
+          resources:
+            requests:
+              storage: 1Gi
+          storageClassName: "px-repl2-file"
+
+    - name: basic-auth
+      secret:
+        secretName: "{{ git_auth_secret }}"
+
+    - name: registry-secrets
+      secret:
+        secretName: "registry-secret"
+        optional: true
