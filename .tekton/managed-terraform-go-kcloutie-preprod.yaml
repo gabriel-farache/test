@@ -1,0 +1,112 @@
+#
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: "go-kcloutie-terraform-preprod"
+  labels:
+    app: "go-kcloutie"
+    .com/business-code: "iac-team"
+    tekton-notify.iac..com/name: "terraform-preprod-{{ eventLabel }}"
+  annotations:
+    tekton-notify.iac..com/git-status-check-context: "ci/tekton" # required to post status check to github
+    tekton-notify.iac..com/generate-from-annotations: "true" # required to tell the notification operator to use annotations instead of a CR
+
+    # Write pipeline run logs to GCS bucket
+    tekton-notify.iac..com/gcs-bucket-name: "prj-iac-team-pp-log-bucket" # copy pipeline run log files to this bucket
+    tekton-notify.iac..com/gcs-bucket-wif-kube-sa: pipeline # use pipeline service account to access bucket
+    tekton-notify.iac..com/gcs-bucket-wif-gcp-sa: "sa-pipeline@-a87865c181efbb2660ba1a1f.iam.gserviceaccount.com" # GCP service account to access bucket
+
+    # Write task results to GitHub comment
+    tekton-notify.iac..com/git-comment-heading: "# Pipeline Results - terraform-preprod-{{ eventLabel }}" # Comment used to post results to github
+    tekton-notify.iac..com/git-comment-task-names: '["init-plan","policy-scan","upload-plan","get-merged-pr-info","download-plan","apply-plan","apply"]' # list of task names to post results to github
+    tekton-notify.iac..com/git-use-pac-secret: "true" # use PaC secret to post results to github
+    tekton-notify.iac..com/git-plan-task-name: init-plan # name of task that has terraform plan output
+
+    # GitHub deployment for DORA metrics
+    tekton-notify.iac..com/git-deployment-environment: "preprod" # GitHub deployment environment
+    tekton-notify.iac..com/git-deployment-description: "preprod deployment" # GitHub deployment description
+    tekton-notify.iac..com/git-deployment-on-events: '["push"]' # GitHub deployment events only happen on push events
+
+    #
+    pipelinesascode.tekton.dev/on-cel-expression: >-
+      event.matches('^pull_request$|^push$') &&
+      ( 'envs/preprod/*'.pathChanged() || '.tekton/managed-terraform-go-kcloutie-preprod.yaml'.pathChanged() ) &&
+      target_branch.matches('(main|master)$')
+
+    pipelinesascode.tekton.dev/max-keep-runs: "2"
+spec:
+# ================================================================================== #
+  pipelineRef:
+    resolver: hub
+    params:
+    - name: type
+      value: artifact
+    - name: catalog
+      value: tekton-pipelines
+    - name: kind
+      value: pipeline
+    - name: name
+      value: managed-terraform-pac
+    - name: version
+      value: ">= 2, < 3"
+
+  params:
+    # Adjustable variables
+    - name: TARGETED_ENVIRONMENT
+      value: "preprod"
+    - name: ENVIRONMENTS_SUBDIRECTORY
+      value: envs
+    - name: GCS_PLAN_BUCKET_NAME
+      value: "bkt-tfstate-iac-team-pp"
+    - name: GCP_SERVICE_ACCOUNT
+      value: "sa-pipeline@-a87865c181efbb2660ba1a1f.iam.gserviceaccount.com"
+    - name: TERRAFORM_ACTION
+      value: "apply"
+    - name: TERRAFORM_APPLY_NO_PLAN
+      value: "false"
+
+    # Pipelines-as-Code built-in variables
+    - name: GIT_CLONE_URL
+      value: "{{ repo_url }}"
+    - name: GIT_HEAD_SHA
+      value: "{{ revision }}"
+    - name: GIT_ORGANIZATION
+      value: "{{ repo_owner }}"
+    - name: GIT_REPOSITORY
+      value: "{{ repo_name }}"
+    - name: GIT_USER
+      value: "{{ sender }}"
+    - name: GIT_SOURCE_BRANCH
+      value: "{{ source_branch }}"
+    - name: GIT_REF
+      value: "{{ target_branch }}"
+    - name: GIT_PR_NUMBER
+      value: "{{ pull_request_number }}"
+    - name: GIT_EVENT
+      value: "{{ event_type }}"
+    - name: GIT_SENDER_LOGIN
+      value: "{{ sender }}"
+
+# ================================================================================== #
+  taskRunTemplate:
+    serviceAccountName: pipeline
+    podTemplate:
+      securityContext:
+        fsGroupChangePolicy: OnRootMismatch
+
+  workspaces:
+    - name: clone-workspace
+      volumeClaimTemplate:
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 2Gi
+          storageClassName: "px-repl2-block"
+
+    # This workspace will inject secret to help the git-clone task to be able to
+    # checkout the private repositories
+    - name: basic-auth
+      secret:
+        secretName: "{{ git_auth_secret }}"
