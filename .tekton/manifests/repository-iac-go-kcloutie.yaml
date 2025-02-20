@@ -1,0 +1,17 @@
+apiVersion: pipelinesascode.tekton.dev/v1alpha1
+kind: Repository
+metadata:
+  name: git-iac-go-kcloutie
+  #
+  namespace: iac-team
+  #
+spec:
+  url: https://github.com/IaC/go-kcloutie
+  params:
+    - filter: pac.event_type == "pull_request"
+      name: eventLabel
+      value: pull-request
+    - filter: pac.event_type == "push"
+      name: eventLabel
+      value: push
+  concurrency_limit: 1

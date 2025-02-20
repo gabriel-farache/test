@@ -1,0 +1,234 @@
+definitions:
+  api.HealthResponse:
+    properties:
+      status:
+        type: string
+    type: object
+  api.LivezResponse:
+    properties:
+      status:
+        type: string
+    type: object
+  model.ErrorDetail:
+    properties:
+      detail:
+        type: string
+      instance:
+        type: string
+      status:
+        type: integer
+      title:
+        type: string
+      type:
+        type: string
+    type: object
+  model.Widget:
+    properties:
+      count:
+        type: integer
+      createdAt:
+        type: string
+      creator:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      updatedAt:
+        type: string
+      updater:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: go-kcloutie Golang CLI and Rest API application
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  title: go-kcloutie example go app
+  version: "1.0"
+paths:
+  /api/v1/time:
+    get:
+      consumes:
+      - application/json
+      description: Get a Time object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorDetail'
+    post:
+      consumes:
+      - application/json
+      description: Send a Time object and get it back with the current time and a
+        custom message or error
+      parameters:
+      - description: The new Time to create
+        in: body
+        name: body
+        required: true
+        schema:
+          type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorDetail'
+  /api/v1/widgets:
+    get:
+      consumes:
+      - application/json
+      description: Get all widgets within the database
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.Widget'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorDetail'
+    post:
+      consumes:
+      - application/json
+      description: Creates a new widget
+      parameters:
+      - description: The new widget to create
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/model.Widget'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorDetail'
+  /api/v1/widgets/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete an existing widget
+      parameters:
+      - description: The id of the widget to get
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Widget'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorDetail'
+    get:
+      consumes:
+      - application/json
+      description: Get a widget by its ID
+      parameters:
+      - description: The id of the widget to get
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Widget'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorDetail'
+    put:
+      consumes:
+      - application/json
+      description: Updates an existing widget
+      parameters:
+      - description: The new widget to update
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/model.Widget'
+      - description: The id of the widget to get
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Widget'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorDetail'
+  /healthz:
+    get:
+      consumes:
+      - application/json
+      description: API Health response
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.HealthResponse'
+      summary: API Health
+      tags:
+      - health
+  /livez:
+    get:
+      consumes:
+      - application/json
+      description: API liveness response
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.LivezResponse'
+      summary: API liveness
+      tags:
+      - liveness
+securityDefinitions:
+  BasicAuth:
+    type: basic
+swagger: "2.0"
